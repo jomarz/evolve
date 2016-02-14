@@ -1,0 +1,16 @@
+.field {
+    margin: 1px;
+    vertical-align: bottom;
+}
+.empty {
+    background-color: sienna;
+}
+.alive {
+    background-color: OliveDrab;
+}
+#wrapper {
+    text-align: center;
+}
+#button_container {
+    margin: 5px;
+}

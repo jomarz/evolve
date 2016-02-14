@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="css/styles.css" type="text/css" />
+        <title> </title>
+        <script>
+            var world = [];
+            var prevWorld = [];
+            var maxFPS = 2;    //Max number of frames per second
+            var width = 15;      //Width in number of cells
+            var height = 15;     //Height in number of cells
+            var fieldWidth = 15;    //width of each cell
+            var fieldHeight = 15;   //Height of each cell
+            var lastFrameTimeMs = 0;    //Last time the Main Loop was run
+            for (var x=0; x<width; x++) {   //Set initial empty states for world and prevWorld
+                world[x] = [];
+                prevWorld[x] = [];
+                for (var y=0; y<height; y++) {
+                    world[x][y] = "empty"; 
+                    prevWorld[x][y] = "empty"; 
+                }
+            }
+            function toggle(x, y) {
+                var element = document.getElementById("field"+x+"_"+y);
+                if(element.className.indexOf("empty") > -1 ) {
+                    element.className = element.className.replace( /(?:^|\s)empty(?!\S)/g , ' alive' );
+                    world[x][y] = "alive";
+                }
+                else if (element.className.indexOf("alive") > -1 ) {
+                    element.className = element.className.replace( /(?:^|\s)alive(?!\S)/g , ' empty' );
+                    world[x][y] = "empty";
+                }
+            }
+            function update() {
+                for (var i = 0; i < width; i++) //Clone world into prevWorld
+                     prevWorld[i] = world[i].slice();
+                for (var x=0; x<width; x++) {
+                    for (var y=0; y<height; y++) {
+                        if (prevWorld[x][y]=='alive' && (countAliveNeighbors(prevWorld, x, y, width, height)<2 || countAliveNeighbors(prevWorld, x, y, width, height)>3))
+                            world[x][y] = 'empty';
+                        else if (prevWorld[x][y]=='empty' && countAliveNeighbors(prevWorld, x, y, width, height)==3)
+                            world[x][y] = 'alive';
+                    }
+                }
+            }
+            function draw() {
+                for (var x=0; x<width; x++) {
+                    for (var y=0; y<height; y++) {
+                        var element = document.getElementById("field"+x+"_"+y);
+                        //We only do something in the cases when the cell changes its state
+                        if(world[x][y] == "alive" && element.className.indexOf('empty') > -1) {    //If world cell is now 'alive' but it was 'empty' in previous step
+                            element.className = element.className.replace( /(?:^|\s)empty(?!\S)/g , ' alive' );
+                        }
+                        else if (world[x][y] == "empty" && element.className.indexOf('alive') > -1) {  //If world cell is now 'empty' but it was 'alive' in previous step
+                            element.className = element.className.replace( /(?:^|\s)alive(?!\S)/g , ' empty' );
+                        }
+                    }
+                }
+            }
+            function mainLoop(timestamp) {  //Main game loop
+                if(document.getElementById("game_status").value == "running") {
+                    if(timestamp >= lastFrameTimeMs + (1000/maxFPS)) {
+                        //Only update and render if there has passed enough time since last frame
+                        update();
+                        draw();
+                        lastFrameTimeMs = timestamp; 
+                    }
+                    requestAnimationFrame(mainLoop);  
+                }
+            }
+            function start() {
+                document.getElementById("game_status").value = "running";
+                requestAnimationFrame(mainLoop);
+            }
+            function stop() {
+                document.getElementById("game_status").value = "stopped";
+            }
+            function resetWorld() {
+                for (var x=0; x<width; x++) {
+                    for (var y=0; y<height; y++) {
+                        world[x][y] = 'empty';
+                    }
+                }
+                draw();
+            }
+            function drawGrid() {
+                for (var x=0; x<width; x++) {
+                    if (x!=0) document.getElementById('gridContainer').innerHTML += '</br>';
+                    for (var y=0; y<height; y++) {
+                        document.getElementById('gridContainer').innerHTML += "<canvas class='field empty' id='field"+x+"_"+y+"' width="+fieldWidth+" height="+fieldHeight+" value='empty' onclick='toggle("+x+", "+y+")'></canvas>";
+                    }
+                }
+            }
+            function countAliveNeighbors(array, x, y, xSize, ySize) {
+                var count = 0;
+                var startX, startY, endX, endY;
+                if (x==0)   startX = 0;
+                else    startX = x - 1;
+                if (y==0)   startY = 0;
+                else    startY = y - 1;
+                if (x==xSize-1)   endX = xSize-1;
+                else endX = x + 1;
+                if (y==ySize-1)   endY = ySize-1;
+                else endY = y + 1;
+                for(var i=startX; i<=endX; i++)   {
+                    for(var j=startY; j<=endY; j++) {
+                        if (!(i==x && j==y)) {
+                            if (array[i][j] == 'alive') count++;
+                        }
+                    }
+                }
+                return count;
+            }
+            window.onload = function() {
+                drawGrid();
+            };
+        </script>
+    </head>
+    <body>
+        <div id='wrapper'>
+            <div id='gridContainer'>
+                
+            </div>
+            <input type='hidden' id='game_status' value='stopped'>
+            <div id="button_container">
+                <button id="start_button" onclick="start()">Start</button>
+                <button id="pause_button" onclick="stop()">Pause</button>
+                <button id="reset_button" onclick="resetWorld()">Reset</button>
+            </div>
+        </div>
+    </body>
+    <script>
+        
+    </script>
+</html>

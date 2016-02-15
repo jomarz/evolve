@@ -5,14 +5,21 @@
         <title> </title>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
         <script>
+            $(document).ready(function(){
             var world = [];
             var prevWorld = [];
+            var lifeLowerLimit = 2; //A cell dies if it has LESS THAN THIS number of neighbors
+            var lifeHigherLimit = 3; //A cell dies if it has MORE THAN THIS number of neighbors
+            var reproductionLowerLimit = 3;
+            var reproductionHigherLimit = 3;
             var maxFPS = 2;    //Max number of frames per second
-            var width = 6;      //Width in number of cells
-            var height = 6;     //Height in number of cells
+            var width = 15;      //Width in number of cells
+            var height = 15;     //Height in number of cells
             var fieldWidth = 15;    //width of each cell
             var fieldHeight = 15;   //Height of each cell
             var lastFrameTimeMs = 0;    //Last time the Main Loop was run
+            var game_status = 'paused';
+            var gridContainerBgColor = 'gray'; //we set it here so that we can remove it with jQuery. Which we dan't do if defined in the CSS file
             for (var x=0; x<width; x++) {   //Set initial empty states for world and prevWorld
                 world[x] = [];
                 prevWorld[x] = [];
@@ -21,27 +28,16 @@
                     prevWorld[x][y] = "empty"; 
                 }
             }
-            function toggle(x, y) {
-                var field = $("#field"+x+"_"+y);
-                if(field.hasClass("empty")) {
-                    field.removeClass("empty");
-                    field.addClass('alive');
-                    world[x][y] = "alive";
-                }
-                else if (field.hasClass('alive')) {
-                    field.removeClass('alive');
-                    field.addClass('empty');
-                    world[x][y] = "empty";
-                }
-            }
+            
             function update() {
                 for (var i = 0; i < width; i++) //Clone world into prevWorld
                      prevWorld[i] = world[i].slice();
                 for (var x=0; x<width; x++) {
                     for (var y=0; y<height; y++) {
-                        if (prevWorld[x][y]=='alive' && (countAliveNeighbors(prevWorld, x, y, width, height)<2 || countAliveNeighbors(prevWorld, x, y, width, height)>3))
+                        var aliveNeighbors = countAliveNeighbors(prevWorld, x, y, width, height);
+                        if (prevWorld[x][y]=='alive' && (aliveNeighbors<lifeLowerLimit || aliveNeighbors>lifeHigherLimit))
                             world[x][y] = 'empty';
-                        else if (prevWorld[x][y]=='empty' && countAliveNeighbors(prevWorld, x, y, width, height)==3)
+                        else if (prevWorld[x][y]=='empty' && aliveNeighbors>=reproductionLowerLimit && aliveNeighbors<=reproductionHigherLimit)
                             world[x][y] = 'alive';
                     }
                 }
@@ -63,7 +59,7 @@
                 }
             }
             function mainLoop(timestamp) {  //Main game loop
-                if(document.getElementById("game_status").value == "running") {
+                if(game_status == "running") {
                     if(timestamp >= lastFrameTimeMs + (1000/maxFPS)) {
                         //Only update and render if there has passed enough time since last frame
                         update();
@@ -73,29 +69,50 @@
                     requestAnimationFrame(mainLoop);  
                 }
             }
-            function start() {
-                document.getElementById("game_status").value = "running";
+            $('#start_button').click(function() {
+                game_status = "running";
+                $('#gridContainer').css('background-color', '');
                 requestAnimationFrame(mainLoop);
-            }
-            function stop() {
-                document.getElementById("game_status").value = "stopped";
-            }
-            function resetWorld() {
+            });
+            $('#pause_button').click(function() {
+               game_status = "paused";
+               $('#gridContainer').css('background-color', gridContainerBgColor);
+            });
+            $('#reset_button').click(function() {
+                //First we set the state of all the fields to 'empty'
+                game_status = 'paused';
+                $('#gridContainer').css('background-color', gridContainerBgColor);
                 for (var x=0; x<width; x++) {
                     for (var y=0; y<height; y++) {
                         world[x][y] = 'empty';
                     }
                 }
-                draw();
-            }
+                draw(); //Now we redraw the grid
+            });
             function drawGrid() {
                 var gridContainer = $('#gridContainer')
                 for (var x=0; x<width; x++) {
-                    if (x!=0) $('#gridContainer').append('</br>');
+                    if (x!=0) gridContainer.append('</br>');
                     for (var y=0; y<height; y++) {
-                        gridContainer.append("<canvas class='field empty' id='field"+x+"_"+y+"' width="+fieldWidth+" height="+fieldHeight+" value='empty' onclick='toggle("+x+", "+y+")'></canvas>");
+                        gridContainer.append("<canvas class='field empty' id='field"+x+"_"+y+"' width="+fieldWidth+" height="+fieldHeight+" value='empty' data-x="+x+" data-y="+y+"></canvas>");
                     }
                 }
+                gridContainer.css('background-color', gridContainerBgColor);
+                $('.field').click(function() {
+                    var x = parseInt($(this).attr("data-x"));
+                    var y = parseInt($(this).attr("data-y"));
+                    var field = $("#field"+x+"_"+y);
+                    if(field.hasClass("empty")) {
+                        field.removeClass("empty");
+                        field.addClass('alive');
+                        world[x][y] = "alive";
+                    }
+                    else if (field.hasClass('alive')) {
+                        field.removeClass('alive');
+                        field.addClass('empty');
+                        world[x][y] = "empty";
+                    }
+                });
             }
             function countAliveNeighbors(array, x, y, xSize, ySize) {
                 var count = 0;
@@ -117,9 +134,8 @@
                 }
                 return count;
             }
-            window.onload = function() {
-                drawGrid();
-            };
+            drawGrid();
+            }); //Closes $(document).ready
         </script>
     </head>
     <body>
@@ -127,11 +143,10 @@
             <div id='gridContainer'>
                 
             </div>
-            <input type='hidden' id='game_status' value='stopped'>
             <div id="button_container">
-                <button id="start_button" onclick="start()">Start</button>
-                <button id="pause_button" onclick="stop()">Pause</button>
-                <button id="reset_button" onclick="resetWorld()">Reset</button>
+                <button id="start_button">Start</button>
+                <button id="pause_button">Pause</button>
+                <button id="reset_button">Reset</button>
             </div>
         </div>
     </body>

@@ -3,10 +3,13 @@
     vertical-align: bottom;
 }
 .empty {
-    background-color: sienna;
+    background-color: white;
 }
 .alive {
     background-color: OliveDrab;
+}
+#gridContainer {
+    display: inline-block;
 }
 #wrapper {
     text-align: center;

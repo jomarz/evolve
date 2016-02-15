@@ -3,12 +3,13 @@
     <head>
         <link rel="stylesheet" href="css/styles.css" type="text/css" />
         <title> </title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
         <script>
             var world = [];
             var prevWorld = [];
             var maxFPS = 2;    //Max number of frames per second
-            var width = 15;      //Width in number of cells
-            var height = 15;     //Height in number of cells
+            var width = 6;      //Width in number of cells
+            var height = 6;     //Height in number of cells
             var fieldWidth = 15;    //width of each cell
             var fieldHeight = 15;   //Height of each cell
             var lastFrameTimeMs = 0;    //Last time the Main Loop was run
@@ -21,13 +22,15 @@
                 }
             }
             function toggle(x, y) {
-                var element = document.getElementById("field"+x+"_"+y);
-                if(element.className.indexOf("empty") > -1 ) {
-                    element.className = element.className.replace( /(?:^|\s)empty(?!\S)/g , ' alive' );
+                var field = $("#field"+x+"_"+y);
+                if(field.hasClass("empty")) {
+                    field.removeClass("empty");
+                    field.addClass('alive');
                     world[x][y] = "alive";
                 }
-                else if (element.className.indexOf("alive") > -1 ) {
-                    element.className = element.className.replace( /(?:^|\s)alive(?!\S)/g , ' empty' );
+                else if (field.hasClass('alive')) {
+                    field.removeClass('alive');
+                    field.addClass('empty');
                     world[x][y] = "empty";
                 }
             }
@@ -46,13 +49,15 @@
             function draw() {
                 for (var x=0; x<width; x++) {
                     for (var y=0; y<height; y++) {
-                        var element = document.getElementById("field"+x+"_"+y);
+                        var field = $("#field"+x+"_"+y);
                         //We only do something in the cases when the cell changes its state
-                        if(world[x][y] == "alive" && element.className.indexOf('empty') > -1) {    //If world cell is now 'alive' but it was 'empty' in previous step
-                            element.className = element.className.replace( /(?:^|\s)empty(?!\S)/g , ' alive' );
+                        if(world[x][y] == "alive" && field.hasClass('empty')) {    //If world cell should now be 'alive' but it was 'empty' in previous step
+                            field.removeClass('empty');
+                            field.addClass('alive');
                         }
-                        else if (world[x][y] == "empty" && element.className.indexOf('alive') > -1) {  //If world cell is now 'empty' but it was 'alive' in previous step
-                            element.className = element.className.replace( /(?:^|\s)alive(?!\S)/g , ' empty' );
+                        else if (world[x][y] == "empty" && field.hasClass('alive')) {  //If world cell should now be 'empty' but it was 'alive' in previous step
+                            field.removeClass('alive');
+                            field.addClass('empty');
                         }
                     }
                 }
@@ -84,10 +89,11 @@
                 draw();
             }
             function drawGrid() {
+                var gridContainer = $('#gridContainer')
                 for (var x=0; x<width; x++) {
-                    if (x!=0) document.getElementById('gridContainer').innerHTML += '</br>';
+                    if (x!=0) $('#gridContainer').append('</br>');
                     for (var y=0; y<height; y++) {
-                        document.getElementById('gridContainer').innerHTML += "<canvas class='field empty' id='field"+x+"_"+y+"' width="+fieldWidth+" height="+fieldHeight+" value='empty' onclick='toggle("+x+", "+y+")'></canvas>";
+                        gridContainer.append("<canvas class='field empty' id='field"+x+"_"+y+"' width="+fieldWidth+" height="+fieldHeight+" value='empty' onclick='toggle("+x+", "+y+")'></canvas>");
                     }
                 }
             }

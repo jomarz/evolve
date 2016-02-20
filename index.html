@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="stylesheet" href="css/styles.css" type="text/css" />
+        <meta charset="UTF-8">
         <title> </title>
+        <!-- Bootstrap compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+        
+        <link rel="stylesheet" href="css/styles.css" type="text/css" />
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
         <script>
             $(document).ready(function(){
-            var world = [];
-            var prevWorld = [];
+            var prevWorld = []; //Where we save the world state. Rules are applied to this state
+            var world = []; //Here we save the resulting state after apliying rules to prevWorld
+            var lastEditedWorld = []; //Where we save the starting point introduced by the player.
             var lifeLowerLimit = 2; //A cell dies if it has LESS THAN THIS number of neighbors
             var lifeHigherLimit = 3; //A cell dies if it has MORE THAN THIS number of neighbors
             var reproductionLowerLimit = 3;
@@ -17,9 +22,16 @@
             var height = 15;     //Height in number of cells
             var fieldWidth = 15;    //width of each cell
             var fieldHeight = 15;   //Height of each cell
+            var parameters = {
+                lifeLowerLimit: 2, //A cell dies if it has LESS THAN THIS number of neighbors
+                lifeHigherLimit: 3, //A cell dies if it has MORE THAN THIS number of neighbors
+                reproductionLowerLimit: 3,
+                reproductionHigherLimit: 3
+            };
             var lastFrameTimeMs = 0;    //Last time the Main Loop was run
             var game_status = 'paused';
-            var gridContainerBgColor = 'gray'; //we set it here so that we can remove it with jQuery. Which we dan't do if defined in the CSS file
+            var edited = false; //Has the starting point has been manually edited?
+            var gridContainerBgColor = 'LightGray'; //we set it here so that we can remove it with jQuery. Which we dan't do if defined in the CSS file
             for (var x=0; x<width; x++) {   //Set initial empty states for world and prevWorld
                 world[x] = [];
                 prevWorld[x] = [];
@@ -28,16 +40,15 @@
                     prevWorld[x][y] = "empty"; 
                 }
             }
-            
             function update() {
                 for (var i = 0; i < width; i++) //Clone world into prevWorld
                      prevWorld[i] = world[i].slice();
                 for (var x=0; x<width; x++) {
                     for (var y=0; y<height; y++) {
                         var aliveNeighbors = countAliveNeighbors(prevWorld, x, y, width, height);
-                        if (prevWorld[x][y]=='alive' && (aliveNeighbors<lifeLowerLimit || aliveNeighbors>lifeHigherLimit))
+                        if (prevWorld[x][y]=='alive' && (aliveNeighbors<parameters.lifeLowerLimit || aliveNeighbors>parameters.lifeHigherLimit))
                             world[x][y] = 'empty';
-                        else if (prevWorld[x][y]=='empty' && aliveNeighbors>=reproductionLowerLimit && aliveNeighbors<=reproductionHigherLimit)
+                        else if (prevWorld[x][y]=='empty' && aliveNeighbors>=parameters.reproductionLowerLimit && aliveNeighbors<=parameters.reproductionHigherLimit)
                             world[x][y] = 'alive';
                     }
                 }
@@ -69,7 +80,23 @@
                     requestAnimationFrame(mainLoop);  
                 }
             }
+            $('#minLife').val(parameters.lifeLowerLimit);
+            $('#maxLife').val(parameters.lifeHigherLimit);
+            $('#minRep').val(parameters.reproductionLowerLimit);
+            $('#maxRep').val(parameters.reproductionHigherLimit);
+            $('.parameterInput').change(function() {
+                var parameterName = $(this).attr('data-parameterName');
+                parameters[parameterName] = parseInt($(this).val());
+                console.dir(parameters)
+            });
             $('#start_button').click(function() {
+                $('#start_button').disabled = true;
+                if ( edited == true) {
+                    for (var i = 0; i < width; i++) { //If the world was edited, then clone world into lastEditedWorld
+                        lastEditedWorld[i] = world[i].slice();
+                    }
+                    edited = false;
+                }
                 game_status = "running";
                 $('#gridContainer').css('background-color', '');
                 requestAnimationFrame(mainLoop);
@@ -87,18 +114,31 @@
                         world[x][y] = 'empty';
                     }
                 }
-                draw(); //Now we redraw the grid
+                draw(); //and finally redraw the grid
+            });
+            $('#last_edited_world_button').click(function() {
+                //Reset the world to previous edited position
+                game_status = 'paused';
+                $('#gridContainer').css('background-color', gridContainerBgColor);
+                for (var x=0; x<width; x++) {
+                    for (var y=0; y<height; y++) {
+                        world[x][y] = lastEditedWorld[x][y];
+                    }
+                }
+                draw(); //And finally redraw the grid
             });
             function drawGrid() {
                 var gridContainer = $('#gridContainer')
                 for (var x=0; x<width; x++) {
-                    if (x!=0) gridContainer.append('</br>');
+                    gridContainer.append('<div class="gridRow">');
+                    //if (x!=0) gridContainer.append('</br>');
                     for (var y=0; y<height; y++) {
                         gridContainer.append("<canvas class='field empty' id='field"+x+"_"+y+"' width="+fieldWidth+" height="+fieldHeight+" value='empty' data-x="+x+" data-y="+y+"></canvas>");
                     }
+                    gridContainer.append('</div>');
                 }
                 gridContainer.css('background-color', gridContainerBgColor);
-                $('.field').click(function() {
+                $('.field').click(function() { //Add toggle functionality when fields are clicked
                     var x = parseInt($(this).attr("data-x"));
                     var y = parseInt($(this).attr("data-y"));
                     var field = $("#field"+x+"_"+y);
@@ -112,6 +152,7 @@
                         field.addClass('empty');
                         world[x][y] = "empty";
                     }
+                    edited = true;
                 });
             }
             function countAliveNeighbors(array, x, y, xSize, ySize) {
@@ -140,17 +181,25 @@
     </head>
     <body>
         <div id='wrapper'>
-            <div id='gridContainer'>
-                
-            </div>
-            <div id="button_container">
-                <button id="start_button">Start</button>
-                <button id="pause_button">Pause</button>
-                <button id="reset_button">Reset</button>
-            </div>
+                <div id='control_panel'>
+                    <div id="button_container">
+                <button type='button' class='btn btn-info glyphicon glyphicon-play' id="start_button"></button>
+                <button type='button' class='btn btn-info glyphicon glyphicon-pause' id="pause_button"></button>
+                <button type='button' class='btn btn-default' id="reset_button">Reset</button>
+                <button type='button' class='btn btn-info glyphicon glyphicon-repeat' id="last_edited_world_button"></button>
+                </div>
+                <div id='tunner'>
+                    Mínimo para vivir <input type='number' id='minLife' data-parameterName='lifeLowerLimit' class='parameterInput' min='0' max='10' step='1' size='3'><br>
+                    Máximo <input type='number' id='maxLife' data-parameterName='lifeHigherLimit' class='parameterInput' min='0' max='10' step='1' size='3'><br>
+                    Mínimo para reproducirse <input type='number' id='minRep' data-parameterName='reproductionLowerLimit' class='parameterInput' min='0' max='10' step='1' size='3'><br>
+                    Máximo <input type='number' id='maxRep' data-parameterName='reproductionHigherLimit' class='parameterInput' min='0' max='10' step='1' size='3'>
+                </div>
+                </div>
+                    <div id='gridContainer'>
+                    
+                    </div>
         </div>
+        <!-- Bootstrap compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
     </body>
-    <script>
-        
-    </script>
 </html>
